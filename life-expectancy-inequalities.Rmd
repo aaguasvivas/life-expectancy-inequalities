@@ -1,0 +1,148 @@
+---
+title: "The Inequalities of Life Expectancy"
+author: "Adelson Aguasvivas"
+date: "March 7th, 2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+
+life_expectancy <- read.csv("raw-data/UNdata_Export_20200308_014050613.csv")
+
+```
+
+# Goal
+
+- To compare life expectancy across countries and genders, through different
+periods of time using ggplot2.
+
+- Rpubs Profile Link: https://rpubs.com/aaguasvivas
+
+```{r data-2000-2005, include=FALSE}
+
+# For the first graph, the focus are the years 2000-2005, and we only want to
+# select relevant information from the dataset, such as country or area, and
+# gender
+
+subdata <- life_expectancy %>%
+  filter(Year == "2000-2005") %>%
+  select(Country.or.Area, Subgroup, Value) %>%
+  spread(Subgroup, Value)
+
+# Here we pick the top countries for male and female life expectancy
+
+top_male <- subdata %>%
+  arrange(Male-Female) %>%
+  head(3)
+
+top_female <- subdata %>%
+  arrange(Female-Male) %>% 
+  head(3)
+
+# We plot the life expectancy graph, with male at the x axis, and female at the
+# y axis, with the labels being country or area. We use a scatterplot to
+# visualize the differences between countries and gender, limiting it to the
+# ages between 35 and 85, using reference lines to plot the top countries by
+# gender, as well as using labs, to give descriptive titles, setting the theme
+# to black and white.
+
+plot_life_expectancy <- subdata %>%
+  ggplot(aes(x = Male, y = Female, label = Country.or.Area)) + 
+  geom_point(colour = "white", 
+             fill = "chartreuse3", 
+             shape=21, 
+             alpha=.55, 
+             size=5) +
+  scale_x_continuous(limits = c(35, 85)) +
+  scale_y_continuous(limits = c(35, 85)) +
+  geom_abline(intercept = 0, slope = 1, linetype = 2) +
+  labs(title = "Life Expectancy at Birth by Country",
+       subtitle = "Years. Period: 2000-2005. Average.",
+       caption = "Source: United Nations Statistics Division",
+       x = "Males",
+       y = "Females") +
+  geom_text(data = top_male, size = 3) +
+  geom_text(data = top_female, size = 3) + 
+  theme_bw()
+
+```
+
+```{r display-graph-1, echo=FALSE}
+
+# Displays the graph on HTML
+
+plot_life_expectancy
+
+```
+
+
+```{r visualizing-differences-1985-2005, include=FALSE}
+
+# Now we follow a similar process, but instead compare the years 1985-1990 to
+# 2000-2005
+
+subdata2 <- life_expectancy %>% 
+  filter(Year %in% c("1985-1990", "2000-2005")) %>% 
+  mutate(Sub_Year=paste(Subgroup, Year, sep="_")) %>% 
+  mutate(Sub_Year=gsub("-", "_", Sub_Year)) %>% 
+  select(-Subgroup, -Year) %>%
+  spread(Sub_Year, Value) %>%
+  mutate(diff_Female = Female_2000_2005 - Female_1985_1990, 
+         diff_Male = Male_2000_2005 - Male_1985_1990)
+
+# Here we keep track of the top and bottom countries
+
+top <- subdata2 %>% 
+  arrange(diff_Male+diff_Female) %>% 
+  head(3)
+
+bottom <- subdata2 %>%
+  arrange(-(diff_Male+diff_Female)) %>%
+  tail(3)
+
+# Here we plot the graph, with men at the x axis, and women at the y axis, with
+# the labels as the country or area. The goal of this graph, is that similar to
+# the first graph, we are comparing life expectancy at birth by country in
+# years, but also focusing on the differences between 1985-1990 and 2000-2005,
+# on average
+
+difference_plot <- subdata2 %>%
+  ggplot(aes(x = diff_Male, 
+             y = diff_Female, 
+             label = Country.or.Area), 
+         guide = FALSE) +
+  geom_point(colour = "white", 
+             fill = "chartreuse3", 
+             shape=21, 
+             alpha = .55, 
+             size = 5)+
+  geom_abline(intercept = 0, slope = 1, linetype = 2) +
+  scale_x_continuous(limits = c(-25, 25)) +
+  scale_y_continuous(limits = c(-25, 25)) +
+  labs(title="Life Expectancy at Birth by Country in Years",
+       subtitle="Difference between 1985-1990 and 2000-2005. Average.",
+       caption="Source: United Nations Statistics Division",
+       x="Males",
+       y="Females") +
+  theme_bw() +
+  geom_hline(yintercept = 0, linetype = 2) + 
+  geom_vline(xintercept = 0, linetype = 2) +
+  geom_text(data = top, size = 3) +
+  geom_text(data = bottom, size = 3) 
+
+```
+
+```{r display-graph-2, echo=FALSE}
+
+# Here, we display the plot noting the differences
+
+difference_plot
+
+```
+
+
